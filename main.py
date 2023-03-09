@@ -1,5 +1,4 @@
 #!/bin/python3
-import json
 import platform
 import sys
 import requests
@@ -13,6 +12,9 @@ def clear():
 
 def get(endpoint):
     return requests.get(url+endpoint, headers=header)
+
+def post(endpoint, body):
+    return requests.post(url+endpoint, headers=header, json=body)
 
 def get_user_id() -> int:
     return get("/api/v1/users/self").json()["id"]
@@ -48,10 +50,13 @@ def get_inbox():
 def get_mail(id):
     return get("/api/v1/conversations/{}".format(id)).json()
 
+def send_mail(address: list, subject, body):
+    return post("/api/v1/conversations", {"subject": subject, "recipients": address, "body": body})
+
 def homepage():
     selection = -1
     while selection == -1:
-        selection = input("1) View grades\n2) View to do\n3) View emails\nSelection: ")
+        selection = input("1) View grades\n2) View to do\n3) View emails\n4) Send emails\nSelection: ")
         clear()
         match selection:
             case '1':
@@ -60,6 +65,8 @@ def homepage():
                 to_do()
             case '3':
                 view_emails()
+            case '4':
+                send_email()
             case _:
                 selection = -1
         
@@ -90,6 +97,27 @@ def to_do():
     clear()
     homepage()
 
+def send_email():
+    courses = get("/api/v1/users/self/courses?per_page=20&include=can_message").json()
+    for i in range(1, len(courses)+1):
+        print("{}) {}".format(i, courses[i-1]["name"]))
+    print("{}) <- Back".format(len(courses)+1))
+    selection = -1
+    while not 1 <= int(selection) <= len(courses)+1:
+        selection = input("Which course would you like to select?: ")
+    clear()
+    if(int(selection) == len(courses)+1):
+        homepage()
+    selected_id = courses[int(selection)-1]["id"]
+    endpoint = "/api/v1/search/recipients?search=&per_page=50&permissions[]=send_messages_all&messageable_only=true&synthetic_contexts=true&context=course_{}_students".format(selected_id)
+    students = get(endpoint).json()
+    for i in range (1, len(students)+1):
+        print("{}) {}".format(i, students[i-1]["name"]))
+    student_id = students[int(input("Which student would you like to message?: "))-1]["id"]
+    print(send_mail([student_id], input("Suject: "), input("Body: ")))
+    input("Press enter to return...")
+    clear()
+    homepage()
 
 def view_emails():
     term_size = os.get_terminal_size()
