@@ -1,17 +1,21 @@
 #!/bin/python3
 import json
+import platform
 import sys
 import requests
 from config import API_KEY
-
+import os
 header = {'Authorization' : 'Bearer {}'.format(API_KEY)}
 url = 'https://{}.instructure.com'.format(sys.argv[1])
+def clear():
+    os.system('cls||clear')
+
+
 def get(endpoint):
     return requests.get(url+endpoint, headers=header)
 
 def get_user_id() -> int:
     return get("/api/v1/users/self").json()["id"]
-
 
 def get_courses_data():
     return get("/api/v1/courses/").json()
@@ -32,11 +36,23 @@ def get_grade(id):
         if i["course_id"] == id:
             return i["grades"]["current_score"]
 
+def get_todo_count():
+    return get("/api/v1/users/self/todo_item_count").json()["assignments_needing_submitting"]
+
+def get_todo():
+    return get("/api/v1/users/self/todo").json()
+
+def get_inbox():
+    return get("/api/v1/conversations").json()
+
+def get_mail(id):
+    return get("/api/v1/conversations/{}".format(id)).json()
+
 def homepage():
     selection = -1
     while selection == -1:
         selection = input("1) View grades\n2) View to do\n3) View emails\nSelection: ")
-        print(selection)
+        clear()
         match selection:
             case '1':
                 grades()
@@ -46,23 +62,80 @@ def homepage():
                 view_emails()
             case _:
                 selection = -1
+        
 
 def grades():
     courses = get_courses_data()
 
     for i in range(1, len(courses)+1):
         print("{}) {}".format(i, courses[i-1]["name"]))
-
+    print("{}) <- Back".format(len(courses)+1))
     selection = -1
     while not 1 <= int(selection) <= len(courses)+1:
         selection = input("Which course would you like to see?: ")
-    print(get_grade(courses[int(selection)-1]["id"]))
+    clear()
+    if(int(selection) == len(courses)+1):
+        homepage()
+    print()
+    print("Your grade is a {}%".format(get_grade(courses[int(selection)-1]["id"])))
+    input("Press enter to return...")
+    clear()
+    homepage()
 
 def to_do():
-    get()
+    print("{} assignments need submitting:".format(get_todo_count()))
+    for i in get_todo():
+        print("{}".format(i["assignment"]["name"]))
+    input("Press enter to return...")
+    clear()
+    homepage()
+
 
 def view_emails():
-    get()
+    term_size = os.get_terminal_size()
+    inbox = get_inbox()
+    selection = -1
+    for i in range(1, len(inbox)+1):
+        current_mail = inbox[i-1]
+        print("{}) {} -- {} << {}".format(i, current_mail["subject"], current_mail["participants"][0]["full_name"], current_mail["workflow_state"]))
+    
+    print("{}) <- Back".format(len(inbox)+1))
+    
+    while not 1 <= int(selection) <= len(inbox)+1:
+        selection = input("Which email would you like to see?")
+    
+    clear()
+    if(int(selection) == len(inbox)+1):
+        homepage()
+
+    mail = get_mail(inbox[int(selection)-1]["id"])
+    command = "cat temp | less"
+    if platform.system() == "Windows":
+        command = "type temp | more"
+    
+    with open('temp', 'w') as f:
+        f.write(mail["subject"])
+        f.write("\n")
+        f.write('=' * term_size.columns)
+        f.write("\n")
+        f.write("\n")
+        f.write("\n")
+
+        for i in reversed(mail["messages"]):
+            f.write(i["created_at"])
+            f.write("\n")
+            f.write(i["body"])
+            f.write("\n")
+            f.write("\n")
+            f.write('=' * term_size.columns)
+            f.write("\n")
+
+        
+    os.system(command)
+    os.remove("temp")
+    clear()
+    homepage()
 
 if __name__ == "__main__":
+    clear()
     homepage()
