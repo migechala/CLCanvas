@@ -114,7 +114,7 @@ def send_email():
     for i in range (1, len(students)+1):
         print("{}) {}".format(i, students[i-1]["name"]))
     student_id = students[int(input("Which student would you like to message?: "))-1]["id"]
-    print(send_mail([student_id], input("Suject: "), input("Body: ")))
+    send_mail([student_id], input("Suject: "), input("Body: "))
     input("Press enter to return...")
     clear()
     homepage()
