@@ -15,9 +15,9 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-s', "--school", type=str, help='mandatory argument school')
 parser.add_argument("-ve", "--view_emails", action='store', const='NoValue', nargs='?')
-parser.add_argument("-se", "--send_email", action="store_true")
-parser.add_argument("-vg", "--view_grades", action="store_true")
-parser.add_argument("-vtd", "--view_to_do", action="store_true")
+parser.add_argument("-se", "--send_email", action='store', const='NoValue', nargs='?')
+parser.add_argument("-vg", "--view_grades", action='store', const='NoValue', nargs='?')
+parser.add_argument("-vtd", "--view_to_do", action='store_true')
 
 args = parser.parse_args()
 
@@ -78,35 +78,48 @@ def view_emails():
         print("{}) {} -- {} << {}".format(i, current_mail["subject"], current_mail["participants"][0]["full_name"], current_mail["workflow_state"]))
 
 
+if args.view_emails != None:
 
-if args.view_emails == "NoValue":
-   view_emails()
+    if args.view_emails == "NoValue":
+        view_emails()
 
-if args.view_emails != "NoValue" and args.view_emails != None:
-    term_size = os.get_terminal_size()
-    inbox = get_inbox()
-    mail = get_mail(inbox[int(args.view_emails)-1]["id"])
-    command = "cat temp | less"
-    if platform.system() == "Windows":
-        command = "type temp | more"
-    
-    with open('temp', 'w') as f:
-        f.write(mail["subject"])
-        f.write("\n")
-        f.write('=' * term_size.columns)
-        f.write("\n")
-        f.write("\n")
-        f.write("\n")
-
-        for i in reversed(mail["messages"]):
-            f.write(i["created_at"])
-            f.write("\n")
-            f.write(i["body"])
-            f.write("\n")
+    else:
+        term_size = os.get_terminal_size()
+        inbox = get_inbox()
+        mail = get_mail(inbox[int(args.view_emails)-1]["id"])
+        command = "cat temp | less"
+        if platform.system() == "Windows":
+            command = "type temp | more"
+        
+        with open('temp', 'w') as f:
+            f.write(mail["subject"])
             f.write("\n")
             f.write('=' * term_size.columns)
             f.write("\n")
+            f.write("\n")
+            f.write("\n")
 
-        
-    os.system(command)
-    os.remove("temp")
+            for i in reversed(mail["messages"]):
+                f.write(i["created_at"])
+                f.write("\n")
+                f.write(i["body"])
+                f.write("\n")
+                f.write("\n")
+                f.write('=' * term_size.columns)
+                f.write("\n")
+
+            
+        os.system(command)
+        os.remove("temp")
+
+elif args.view_to_do == True:
+    print("{} assignments need submitting:".format(get_todo_count()))
+    for i in get_todo():
+        print("{}".format(i["assignment"]["name"]))
+elif args.view_grades != None:
+    courses = get_courses_data()
+    if args.view_grades == "NoValue":
+        for i in range(1, len(courses)+1):
+            print("{}) {}".format(i, courses[i-1]["name"]))
+    else: 
+        print("{}".format(get_grade(courses[int(args.view_grades)-1]["id"])))
