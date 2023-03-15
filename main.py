@@ -1,8 +1,11 @@
 #!/bin/python3
+API_KEY = ""
 try:
     import platform
     import requests
-    from config import API_KEY
+    if API_KEY == "":
+        import config
+        API_KEY = config.API_KEY
     import os
     import argparse
 
